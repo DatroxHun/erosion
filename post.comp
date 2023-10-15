@@ -1,0 +1,39 @@
+#version 460 core
+
+// constants
+
+// images
+layout(rgba32f, binding = 0) uniform image2D imgInput;
+layout(rgba32f, binding = 1) uniform image2D imgOutput;
+
+// variables
+layout(location = 0) uniform int blur_intensity;
+
+// functions
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    vec2 UV = coord.xy / gl_NumWorkGroups.xy;
+
+    if (blur_intensity <= 0)
+    {
+        imageStore(imgOutput, coord, imageLoad(imgInput, coord));
+        return;
+    }
+    
+    vec3 color_sum = vec3(0.0, 0.0, 0.0);
+    ivec2 delta= ivec2(-blur_intensity,-blur_intensity);
+    for (int x = -blur_intensity; x <= blur_intensity; x++)
+    {
+        for (int y = -blur_intensity; y <= blur_intensity; y++)
+        {
+            color_sum += imageLoad(imgInput, coord + ivec2(x , y)).xyz;
+        }
+    }
+
+    vec4 value = vec4(color_sum / ((2 * blur_intensity + 1) * (2 * blur_intensity + 1)), 1.0);
+
+    imageStore(imgOutput, coord, value);
+}

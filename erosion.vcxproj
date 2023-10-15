@@ -148,6 +148,7 @@
     <None Include="default.comp" />
     <None Include="default.frag" />
     <None Include="default.vert" />
+    <None Include="post.comp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="computeClass.h" />
