@@ -12,6 +12,7 @@
 
 using namespace std::chrono;
 
+// constants
 #define WIDTH 800
 #define HEIGHT 800
 #define FRAME_TICK_DURATION .2
