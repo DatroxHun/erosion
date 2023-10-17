@@ -75,8 +75,8 @@
     <LibraryPath>C:\Users\danil\source\repos\_ELTE\erosion\Libraries\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\danil\source\repos\_ELTE\erosion\Libraries\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\danil\source\repos\_ELTE\erosion\Libraries\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)Libraries\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)Libraries\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
