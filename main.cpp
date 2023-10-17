@@ -16,7 +16,7 @@ using namespace std::chrono;
 #define WIDTH 800
 #define HEIGHT 800
 #define FRAME_TICK_DURATION .2
-#define BLUR_INTENSITY 3
+#define BLUR_INTENSITY 1
 
 // vertex coordinates
 GLfloat quadVertices[] = {
