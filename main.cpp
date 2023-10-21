@@ -1,3 +1,7 @@
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -8,6 +12,7 @@
 #include "shaderClass.h"
 #include "computeClass.h"
 #include "VBO.h"
+#include "EBO.h"
 #include "VAO.h"
 
 using namespace std::chrono;
@@ -16,18 +21,21 @@ using namespace std::chrono;
 #define WIDTH 800
 #define HEIGHT 800
 #define FRAME_TICK_DURATION .2
-#define BLUR_INTENSITY 1
 
 // vertex coordinates
 GLfloat quadVertices[] = {
 	-1.0f, 1.0f, 0.0f,
 	-1.0f, -1.0f, 0.0f,
 	1.0f, -1.0f, 0.0f,
-
-	-1.0f, 1.0f, 0.0f,
-	1.0f, -1.0f, 0.0f,
 	1.0f, 1.0f, 0.0f
 };
+
+GLuint quadIndices[] = {
+	0, 1, 2,
+	0, 2, 3
+};
+
+int blur_intensity = 1;
 
 
 int main()
@@ -74,10 +82,12 @@ int main()
 	vao.Bind();
 
 	VBO vbo(quadVertices, sizeof(quadVertices));
+	EBO ebo(quadIndices, sizeof(quadIndices));
 
 	vao.LinkVBO(vbo, 0);
 	vao.Unbind();
 	vbo.Unbind();
+	ebo.Unbind();
 
 	// uniform initialization
 	GLint tLocation = glGetUniformLocation(noiseShader.ID, "t");
@@ -118,6 +128,14 @@ int main()
 	// fps counter initialization
 	double dt, currentTime, lastTime = glfwGetTime(), frameTime = glfwGetTime();
 
+	// UI
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 430");
+
 	// main while loop
 	while (!glfwWindowShouldClose(window))
 	{
@@ -134,7 +152,9 @@ int main()
 			}
 		}
 
-		
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
 
 		// Compute Shader dispatching
 		noiseShader.Activate();
@@ -148,7 +168,7 @@ int main()
 
 
 		blurShader.Activate();
-		glUniform1i(blurIntensityLocation, BLUR_INTENSITY);
+		glUniform1i(blurIntensityLocation, blur_intensity);
 
 		glDispatchCompute((GLuint)WIDTH, (GLuint)HEIGHT, 1);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -166,8 +186,18 @@ int main()
 		glUniform2i(imgDimLocation, WIDTH, HEIGHT);
 
 		// object type, starting index of vertex array, number of vertecies)
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		//glDrawArrays(GL_TRIANGLES, 0, 6);
 
+		// object type, indices count, indices data type, index of indices
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+
+		ImGui::Begin("Settings");
+		ImGui::SliderInt("Blur Kernel Size", &blur_intensity, 0, 10);
+		ImGui::End();
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 
 		// swap buffers and handle all GLFW events
@@ -176,8 +206,13 @@ int main()
 	}
 
 	// freeing up memory
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+
 	vao.Delete();
 	vbo.Delete();
+	ebo.Delete();
 	shaderProgram.Delete();
 
 	glfwDestroyWindow(window);
