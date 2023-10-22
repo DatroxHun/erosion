@@ -10,9 +10,6 @@ out vec4 glFragColor;
 
 layout(rgba32f, binding = 1) uniform image2D imgInput;
 	
-uniform sampler2D img;
-uniform ivec2 img_dim;
-	
 void main()
 {             
     vec3 texCol = imageLoad(imgInput, ivec2(gl_FragCoord.xy)).xyz;     

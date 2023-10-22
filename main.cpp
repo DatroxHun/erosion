@@ -4,6 +4,9 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -15,19 +18,21 @@
 #include "EBO.h"
 #include "VAO.h"
 
+#include "camera.h"
+
 using namespace std::chrono;
 
 // constants
 #define WIDTH 800
 #define HEIGHT 800
-#define FRAME_TICK_DURATION .2
+#define FRAME_TICK_DURATION .25
 
 // vertex coordinates
 GLfloat quadVertices[] = {
-	-1.0f, 1.0f, 0.0f,
-	-1.0f, -1.0f, 0.0f,
-	1.0f, -1.0f, 0.0f,
-	1.0f, 1.0f, 0.0f
+	-1.f, 0.0f, 1.0f,
+	-1.f, 0.0f, -1.f,
+	1.0f, 0.0f, -1.f,
+	1.0f, 0.0f, 1.0f
 };
 
 GLuint quadIndices[] = {
@@ -73,6 +78,9 @@ int main()
 	// specify OpenGl's viewport in window (from (0; 0) to (WIDTH; HEIGHT))
 	glViewport(0, 0, WIDTH, HEIGHT);
 
+	//Cam
+	Camera cam(vec3(.0, .0, .1), vec3(.0), vec3(0., 1., 0.));
+
 	Shader shaderProgram("default.vert", "default.frag");
 	ComputeShader noiseShader("default.comp");
 	ComputeShader blurShader("post.comp");
@@ -94,8 +102,7 @@ int main()
 
 	GLint blurIntensityLocation = glGetUniformLocation(blurShader.ID, "blur_intensity");
 
-	GLint imgLocation = glGetUniformLocation(shaderProgram.ID, "img");
-	GLint imgDimLocation = glGetUniformLocation(shaderProgram.ID, "img_dim");
+	GLint camMatLocation = glGetUniformLocation(shaderProgram.ID, "cam_mat");
 
 
 	// initialize Image
@@ -139,6 +146,8 @@ int main()
 	// main while loop
 	while (!glfwWindowShouldClose(window))
 	{
+		cam.pos = vec3(cos(glfwGetTime()), .5, sin(glfwGetTime()));
+
 		// time related calculations
 		{
 			currentTime = glfwGetTime();
@@ -176,14 +185,13 @@ int main()
 
 
 		// QUAD rendering
-		glClear(GL_DEPTH_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// set our shaderProgram the current Program
 		shaderProgram.Activate();
 		vao.Bind();
 
-		glUniform1i(imgLocation, 0);
-		glUniform2i(imgDimLocation, WIDTH, HEIGHT);
+		glUniformMatrix4fv(camMatLocation, 1, GL_FALSE, value_ptr(cam.get_matrix()));
 
 		// object type, starting index of vertex array, number of vertecies)
 		//glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -192,6 +200,7 @@ int main()
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 
+		// UI rendering
 		ImGui::Begin("Settings");
 		ImGui::SliderInt("Blur Kernel Size", &blur_intensity, 0, 10);
 		ImGui::End();
