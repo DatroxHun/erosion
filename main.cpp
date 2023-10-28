@@ -25,9 +25,43 @@ using namespace std::chrono;
 // constants
 #define WIDTH 800
 #define HEIGHT 800
+#define RES 100
 #define FRAME_TICK_DURATION .25
 
 // vertex coordinates
+void get_sub_div_quad_vertices(GLfloat vertices[], int res)
+{
+	int r_res = res + 1;
+
+	for (int i = 0; i < r_res; i++)
+	{
+		for (int j = 0; j < r_res; j++)
+		{
+			vertices[3 * (i + j * r_res) + 0] = -1.0 + 2.0 * i / (GLfloat)res; // x
+			vertices[3 * (i + j * r_res) + 1] = 0.0/*(i + j) / (GLfloat)(4.0 * res)*/; // y
+			vertices[3 * (i + j * r_res) + 2] = -1.0 + 2.0 * j / (GLfloat)res; // z
+		}
+	}
+}
+
+void get_sub_div_quad_indices(GLuint indices[], int res)
+{
+	int r_res = res + 1;
+
+	for (GLuint i = 0; i < res; i++)
+	{
+		for (GLuint j = 0; j < res; j++)
+		{
+			indices[6 * (i + j * res) + 0] = i + j * r_res;
+			indices[6 * (i + j * res) + 1] = (i + 1) + j * r_res;
+			indices[6 * (i + j * res) + 2] = (i + 1) + (j + 1) * r_res;
+			indices[6 * (i + j * res) + 3] = i + j * r_res;
+			indices[6 * (i + j * res) + 4] = (i + 1) + (j + 1) * r_res;
+			indices[6 * (i + j * res) + 5] = i + (j + 1) * r_res;
+		}
+	}
+}
+
 GLfloat quadVertices[] = {
 	-1.f, 0.0f, 1.0f,
 	-1.f, 0.0f, -1.f,
@@ -79,18 +113,24 @@ int main()
 	glViewport(0, 0, WIDTH, HEIGHT);
 
 	//Cam
-	Camera cam(vec3(.0, .0, .1), vec3(.0), vec3(0., 1., 0.));
+	Camera cam(vec3(.0, .0, .1), vec3(.0), vec3(0., 1., 0.), 60.0);
 
 	Shader shaderProgram("default.vert", "default.frag");
 	ComputeShader noiseShader("default.comp");
 	ComputeShader blurShader("post.comp");
 
+	GLfloat vertices[3 * (RES + 1) * (RES + 1)];
+	GLuint indices[6 * RES * RES];
+
+	get_sub_div_quad_vertices(vertices, RES);
+	get_sub_div_quad_indices(indices, RES);
+
 	// VBO and VAO stuff
 	VAO vao;
 	vao.Bind();
 
-	VBO vbo(quadVertices, sizeof(quadVertices));
-	EBO ebo(quadIndices, sizeof(quadIndices));
+	VBO vbo(vertices, sizeof(vertices));
+	EBO ebo(indices, sizeof(indices));
 
 	vao.LinkVBO(vbo, 0);
 	vao.Unbind();
@@ -102,6 +142,7 @@ int main()
 
 	GLint blurIntensityLocation = glGetUniformLocation(blurShader.ID, "blur_intensity");
 
+	GLint resolutionLocation = glGetUniformLocation(shaderProgram.ID, "resolution");
 	GLint camMatLocation = glGetUniformLocation(shaderProgram.ID, "cam_mat");
 
 
@@ -146,7 +187,7 @@ int main()
 	// main while loop
 	while (!glfwWindowShouldClose(window))
 	{
-		cam.pos = vec3(cos(glfwGetTime()), .5, sin(glfwGetTime()));
+		cam.pos = vec3(3.0 * cos(glfwGetTime() * .5), 1.0, 3.0 * sin(glfwGetTime() * .5));
 
 		// time related calculations
 		{
@@ -191,13 +232,14 @@ int main()
 		shaderProgram.Activate();
 		vao.Bind();
 
+		glUniform1i(resolutionLocation, RES);
 		glUniformMatrix4fv(camMatLocation, 1, GL_FALSE, value_ptr(cam.get_matrix()));
 
 		// object type, starting index of vertex array, number of vertecies)
 		//glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		// object type, indices count, indices data type, index of indices
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 6 * RES * RES, GL_UNSIGNED_INT, 0);
 
 
 		// UI rendering
