@@ -149,7 +149,7 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	//Cam
-	cam = Camera(vec3(.5, 0., .0), vec3(.0), vec3(0., 1., 0.));
+	cam = Camera(vec3(3., 2., .0), vec3(.0), vec3(0., 1., 0.));
 
 	Shader shaderProgram("default.vert", "default.frag");
 	ComputeShader noiseShader("default.comp");
@@ -225,6 +225,11 @@ int main()
 	glfwSetMouseButtonCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
 
+	// terrain generation
+	noiseShader.Activate();
+	glDispatchCompute((GLuint)(RES / 16), (GLuint)(RES / 16), 1);
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
 	// main while loop
 	while (!glfwWindowShouldClose(window))
 	{
@@ -254,16 +259,6 @@ int main()
 		mouse_dy = 0;
 
 		// Compute Shader dispatching
-		noiseShader.Activate();
-		glUniform1f(tLocation, (float)fmod(currentTime, 100.0));
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-		glDispatchCompute((GLuint)(RES / 16), (GLuint)(RES / 16), 1);
-
-		// make sure writing to image has finished before read
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-
 		blurShader.Activate();
 		glUniform1i(blurIntensityLocation, blur_intensity);
 
@@ -272,7 +267,7 @@ int main()
 
 
 
-		// QUAD rendering
+		// subdivided QUAD rendering
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// set our shaderProgram the current Program
