@@ -1,6 +1,6 @@
 #version 460 core
 
-#define OCT 8
+#define OCT 6
 
 // constants
 const float PHI = 1.61803398874989484820459;
@@ -46,13 +46,13 @@ float noise( in vec2 x, in float scale = 1.0)
                         hash(i+ivec3(1,1,1)),f.x),f.y),f.z);
 }
 
-layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main()
 {
     vec4 value = vec4(0.0, 0.0, 0.0, 1.0);
 
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    vec2 UV = coord.xy / gl_NumWorkGroups.xy;
+    vec2 UV = coord.xy / (gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
     
     /*
     value.x = gold_noise(coord.xy, t + .0);
@@ -61,7 +61,7 @@ void main()
     */
 
     float scale = 1.;
-    float default_scale =  7.5 / pow(2.0, OCT);
+    float default_scale =  2.5 / pow(2.0, OCT);
 
     float weight = 1.;
     float sum = 0.;

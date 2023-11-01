@@ -25,7 +25,7 @@ using namespace std::chrono;
 // constants
 #define WIDTH 800
 #define HEIGHT 800
-#define RES 100
+#define RES 128 // should be a power of 2 (128 works pretty well)
 #define FRAME_TICK_DURATION .25
 
 // vertex coordinates
@@ -74,8 +74,43 @@ GLuint quadIndices[] = {
 	0, 2, 3
 };
 
-int blur_intensity = 1;
+// global variables
+Camera cam;
+int blur_intensity = 0;
+double dt;
 
+// mouse callbacks
+bool left_button_down = false;
+double last_mouse_x = WIDTH / 2, last_mouse_y = HEIGHT / 2;
+float mouse_sensitivity = 2.;
+double mouse_dx, mouse_dy;
+
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+
+	mouse_dx = xpos - last_mouse_x;
+	mouse_dy = last_mouse_y - ypos; // reversed since y-coordinates range from bottom to top
+	last_mouse_x = xpos;
+	last_mouse_y = ypos;
+}
+static void mouse_callback(GLFWwindow* window, int button, int action, int mods)
+{
+	ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+
+	if (button == GLFW_MOUSE_BUTTON_LEFT) {
+		if (GLFW_PRESS == action)
+			left_button_down = true;
+		else if (GLFW_RELEASE == action)
+			left_button_down = false;
+	}
+}
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	//cam.FOV *= 1. - yoffset / 10.;
+	cam.update_polar(0.0, 0.0, -yoffset * .25);
+	std::cout << cam.pos.x << " " << cam.pos.y << " " << cam.pos.z;
+}
 
 int main()
 {
@@ -106,14 +141,15 @@ int main()
 	//glfwSwapInterval(0);
 
 
-
 	// load GLAD so it can configure OpenGL
 	gladLoadGL();
 	// specify OpenGl's viewport in window (from (0; 0) to (WIDTH; HEIGHT))
 	glViewport(0, 0, WIDTH, HEIGHT);
 
+	glEnable(GL_DEPTH_TEST);
+
 	//Cam
-	Camera cam(vec3(.0, .0, .1), vec3(.0), vec3(0., 1., 0.), 60.0);
+	cam = Camera(vec3(.5, 0., .0), vec3(.0), vec3(0., 1., 0.));
 
 	Shader shaderProgram("default.vert", "default.frag");
 	ComputeShader noiseShader("default.comp");
@@ -157,7 +193,7 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, RES, RES, 0, GL_RGBA, GL_FLOAT, NULL);
 
 	glBindImageTexture(0, texture0, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
@@ -169,12 +205,12 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, RES, RES, 0, GL_RGBA, GL_FLOAT, NULL);
 
 	glBindImageTexture(1, texture1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
 	// fps counter initialization
-	double dt, currentTime, lastTime = glfwGetTime(), frameTime = glfwGetTime();
+	double currentTime, lastTime = glfwGetTime(), frameTime = glfwGetTime();
 
 	// UI
 	IMGUI_CHECKVERSION();
@@ -184,11 +220,14 @@ int main()
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 430");
 
+	// callbacks
+	glfwSetCursorPosCallback(window, cursor_position_callback);
+	glfwSetMouseButtonCallback(window, mouse_callback);
+	glfwSetScrollCallback(window, scroll_callback);
+
 	// main while loop
 	while (!glfwWindowShouldClose(window))
 	{
-		cam.pos = vec3(3.0 * cos(glfwGetTime() * .5), 1.0, 3.0 * sin(glfwGetTime() * .5));
-
 		// time related calculations
 		{
 			currentTime = glfwGetTime();
@@ -202,16 +241,24 @@ int main()
 			}
 		}
 
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
+		// camera
+		if (left_button_down)
+		{
+			cam.update_polar(mouse_dx / HEIGHT * mouse_sensitivity, -mouse_dy / HEIGHT * mouse_sensitivity);
+		}
+		else
+		{
+			cam.update_polar(dt * .025, 0.0);
+		}
+		mouse_dx = 0;
+		mouse_dy = 0;
 
 		// Compute Shader dispatching
 		noiseShader.Activate();
 		glUniform1f(tLocation, (float)fmod(currentTime, 100.0));
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-		glDispatchCompute((GLuint)WIDTH, (GLuint)HEIGHT, 1);
+		glDispatchCompute((GLuint)(RES / 16), (GLuint)(RES / 16), 1);
 
 		// make sure writing to image has finished before read
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -220,7 +267,7 @@ int main()
 		blurShader.Activate();
 		glUniform1i(blurIntensityLocation, blur_intensity);
 
-		glDispatchCompute((GLuint)WIDTH, (GLuint)HEIGHT, 1);
+		glDispatchCompute((GLuint)(RES / 16), (GLuint)(RES / 16), 1);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 
@@ -243,6 +290,10 @@ int main()
 
 
 		// UI rendering
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
 		ImGui::Begin("Settings");
 		ImGui::SliderInt("Blur Kernel Size", &blur_intensity, 0, 10);
 		ImGui::End();

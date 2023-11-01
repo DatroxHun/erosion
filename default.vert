@@ -18,8 +18,9 @@ out int frag_resolution;
 void main()
 {
     worldPos = vert_pos;
+    frag_resolution = resolution;
 
-    ivec2 sample_point = ivec2((vert_pos.xz + vec2(1.0)) / 2.0 * resolution);
+    ivec2 sample_point = ivec2((vert_pos.xz + vec2(1.0)) / 2.0 * (resolution - .001));
     vec3 alt_vert_pos = vert_pos + vec3(0.0, imageLoad(imgInput, sample_point).x, 0.0);
 
     gl_Position = cam_mat * vec4(alt_vert_pos, 1.0);

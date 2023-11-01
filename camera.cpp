@@ -1,5 +1,7 @@
 #include "camera.h"
 
+#define PI 3.14159265358979
+
 Camera::Camera()
 {
 	this->pos = vec3(.0, .0, .1);
@@ -33,7 +35,35 @@ void Camera::set_up(vec3 up)
 	this->c_up = cross(dir, right);
 }
 
+void Camera::move(vec3 delta)
+{
+	this->pos += delta;
+}
+
+void Camera::update_polar(float da, float db)
+{
+	calculate_polar(da, db, 0.0);
+	this->pos = radius * vec3(cos(beta) * cos(alpha), sin(beta), cos(beta) * sin(alpha));
+}
+
+void Camera::update_polar(float da, float db, float dr)
+{
+	calculate_polar(da, db, dr);
+	this->pos = radius * vec3(cos(beta) * cos(alpha), sin(beta), cos(beta) * sin(alpha));
+}
+
 mat4 Camera::get_matrix()
 {
-	return perspective(radians(this->FOV), this->aspect_ratio, .01f, 100.f) * lookAt(this->pos, this->target, this->up);
+	return perspective(radians(FOV), aspect_ratio, .01f, 100.f) * lookAt(pos, target, up);
+}
+
+void Camera::calculate_polar(float da, float db, float dr)
+{
+	radius = length(pos);
+
+	beta = asin(pos.y / radius) + db;
+	beta = clamp(beta, (float)(-PI * .5 + .001), (float)(PI * .5 - .001));
+	alpha = atan2(pos.z, pos.x) + da;
+
+	radius = fmin(fmax(radius + dr, 0.5f), 7.5f);
 }
