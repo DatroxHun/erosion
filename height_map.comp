@@ -1,6 +1,6 @@
 #version 460 core
 
-#define OCT 6
+#define OCT 32
 
 // constants
 const float PHI = 1.61803398874989484820459;
@@ -10,13 +10,13 @@ const float HALF_PI = 1.57079632679489661923;
 layout(rgba32f, binding = 0) uniform image2D imgOutput;
 
 // variables
-layout(location = 0) uniform float t;
+layout(location = 0) uniform ivec2 seed;
 
 // functions
-float gold_noise(in vec2 xy, in float seed)
+/*float gold_noise(in vec2 xy, in float seed)
 {
     return fract(fract(tan(mod(distance(xy * PHI, xy) * seed, HALF_PI - .001)) * xy.x) / 127.4 * 128.0);
-}
+}*/
 
 float hash( ivec3 p )
 {
@@ -52,6 +52,7 @@ void main()
     vec4 value = vec4(0.0, 0.0, 0.0, 1.0);
 
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 world_coord = seed + coord;
     vec2 UV = coord.xy / (gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
     
     /*
@@ -61,18 +62,18 @@ void main()
     */
 
     float scale = 1.;
-    float default_scale =  2.5 / pow(2.0, OCT);
+    float default_scale =  .025;
 
-    float weight = 1.;
+    float weight = 1.0;
     float sum = 0.;
 
     mat2 rot_sum = mat2(1.0);
     mat2 rot_mat = mat2(4. / 5., 3. / 5., -3. / 5., 4. / 5.);
     for (int i = 0; i < OCT; i++)
     {
-        value.xyz += vec3(noise(coord.xy * rot_mat, default_scale * scale)) * weight;
+        value.xyz += vec3(noise(world_coord.xy * rot_sum, default_scale * scale)) * weight;
         
-        scale *= 2.5;
+        scale *= 2.;
         sum += weight;
         weight *= .5;
         rot_sum *= rot_mat;

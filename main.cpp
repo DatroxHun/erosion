@@ -17,6 +17,7 @@
 #include "VBO.h"
 #include "EBO.h"
 #include "VAO.h"
+#include "subDivQuadClass.h"
 
 #include "camera.h"
 
@@ -25,59 +26,14 @@ using namespace std::chrono;
 // constants
 #define WIDTH 800
 #define HEIGHT 800
-#define RES 128 // should be a power of 2 (128 works pretty well)
-#define FRAME_TICK_DURATION .25
-
-// vertex coordinates
-void get_sub_div_quad_vertices(GLfloat vertices[], int res)
-{
-	int r_res = res + 1;
-
-	for (int i = 0; i < r_res; i++)
-	{
-		for (int j = 0; j < r_res; j++)
-		{
-			vertices[3 * (i + j * r_res) + 0] = -1.0 + 2.0 * i / (GLfloat)res; // x
-			vertices[3 * (i + j * r_res) + 1] = 0.0/*(i + j) / (GLfloat)(4.0 * res)*/; // y
-			vertices[3 * (i + j * r_res) + 2] = -1.0 + 2.0 * j / (GLfloat)res; // z
-		}
-	}
-}
-
-void get_sub_div_quad_indices(GLuint indices[], int res)
-{
-	int r_res = res + 1;
-
-	for (GLuint i = 0; i < res; i++)
-	{
-		for (GLuint j = 0; j < res; j++)
-		{
-			indices[6 * (i + j * res) + 0] = i + j * r_res;
-			indices[6 * (i + j * res) + 1] = (i + 1) + j * r_res;
-			indices[6 * (i + j * res) + 2] = (i + 1) + (j + 1) * r_res;
-			indices[6 * (i + j * res) + 3] = i + j * r_res;
-			indices[6 * (i + j * res) + 4] = (i + 1) + (j + 1) * r_res;
-			indices[6 * (i + j * res) + 5] = i + (j + 1) * r_res;
-		}
-	}
-}
-
-GLfloat quadVertices[] = {
-	-1.f, 0.0f, 1.0f,
-	-1.f, 0.0f, -1.f,
-	1.0f, 0.0f, -1.f,
-	1.0f, 0.0f, 1.0f
-};
-
-GLuint quadIndices[] = {
-	0, 1, 2,
-	0, 2, 3
-};
+#define RES 128 // should be a power of 2 (128 works pretty well) -> above approx. 150 crashes!!!!!!!!!!!!!!!
 
 // global variables
 Camera cam;
-int blur_intensity = 0;
 double dt;
+
+int blur_intensity = 0;
+float frame_tick_duration = .25f;
 
 // mouse callbacks
 bool left_button_down = false;
@@ -98,6 +54,8 @@ static void mouse_callback(GLFWwindow* window, int button, int action, int mods)
 {
 	ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 
+	if (ImGui::GetIO().WantCaptureMouse) return;
+
 	if (button == GLFW_MOUSE_BUTTON_LEFT) {
 		if (GLFW_PRESS == action)
 			left_button_down = true;
@@ -109,7 +67,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	//cam.FOV *= 1. - yoffset / 10.;
 	cam.update_polar(0.0, 0.0, -yoffset * .25);
-	std::cout << cam.pos.x << " " << cam.pos.y << " " << cam.pos.z;
 }
 
 int main()
@@ -151,35 +108,16 @@ int main()
 	//Cam
 	cam = Camera(vec3(3., 2., .0), vec3(.0), vec3(0., 1., 0.));
 
-	Shader shaderProgram("default.vert", "default.frag");
-	ComputeShader noiseShader("default.comp");
-	ComputeShader blurShader("post.comp");
+	Quad *quad = new Quad(RES);
+	ComputeShader heightMapShader("height_map.comp");
+	ComputeShader blurShader("blur.comp");
 
-	GLfloat vertices[3 * (RES + 1) * (RES + 1)];
-	GLuint indices[6 * RES * RES];
-
-	get_sub_div_quad_vertices(vertices, RES);
-	get_sub_div_quad_indices(indices, RES);
-
-	// VBO and VAO stuff
-	VAO vao;
-	vao.Bind();
-
-	VBO vbo(vertices, sizeof(vertices));
-	EBO ebo(indices, sizeof(indices));
-
-	vao.LinkVBO(vbo, 0);
-	vao.Unbind();
-	vbo.Unbind();
-	ebo.Unbind();
+	//GLfloat vertices[3 * (RES + 1) * (RES + 1)];
+	//GLuint indices[6 * RES * RES];
 
 	// uniform initialization
-	GLint tLocation = glGetUniformLocation(noiseShader.ID, "t");
-
+	GLint seedLocation = glGetUniformLocation(heightMapShader.ID, "seed");
 	GLint blurIntensityLocation = glGetUniformLocation(blurShader.ID, "blur_intensity");
-
-	GLint resolutionLocation = glGetUniformLocation(shaderProgram.ID, "resolution");
-	GLint camMatLocation = glGetUniformLocation(shaderProgram.ID, "cam_mat");
 
 
 	// initialize Image
@@ -226,7 +164,8 @@ int main()
 	glfwSetScrollCallback(window, scroll_callback);
 
 	// terrain generation
-	noiseShader.Activate();
+	heightMapShader.Activate();
+	glUniform2i(seedLocation, rand() % 1000, rand() % 1000);
 	glDispatchCompute((GLuint)(RES / 16), (GLuint)(RES / 16), 1);
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
@@ -239,7 +178,7 @@ int main()
 			dt = currentTime - lastTime;
 			lastTime = currentTime;
 
-			if (glfwGetTime() - frameTime > FRAME_TICK_DURATION)
+			if (glfwGetTime() - frameTime > frame_tick_duration)
 			{
 				printf("\r%.1f fps     ", 1.0 / dt);
 				frameTime = glfwGetTime();
@@ -258,7 +197,7 @@ int main()
 		mouse_dx = 0;
 		mouse_dy = 0;
 
-		// Compute Shader dispatching
+		// compute shader dispatching
 		blurShader.Activate();
 		glUniform1i(blurIntensityLocation, blur_intensity);
 
@@ -266,22 +205,9 @@ int main()
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 
-
 		// subdivided QUAD rendering
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// set our shaderProgram the current Program
-		shaderProgram.Activate();
-		vao.Bind();
-
-		glUniform1i(resolutionLocation, RES);
-		glUniformMatrix4fv(camMatLocation, 1, GL_FALSE, value_ptr(cam.get_matrix()));
-
-		// object type, starting index of vertex array, number of vertecies)
-		//glDrawArrays(GL_TRIANGLES, 0, 6);
-
-		// object type, indices count, indices data type, index of indices
-		glDrawElements(GL_TRIANGLES, 6 * RES * RES, GL_UNSIGNED_INT, 0);
+		quad->render(cam);
 
 
 		// UI rendering
@@ -291,6 +217,8 @@ int main()
 
 		ImGui::Begin("Settings");
 		ImGui::SliderInt("Blur Kernel Size", &blur_intensity, 0, 10);
+		ImGui::InputFloat("Frame Tick Duration (s)", &frame_tick_duration, 0.025, .1);
+		frame_tick_duration = clamp(frame_tick_duration, .025f, 1.f);
 		ImGui::End();
 
 		ImGui::Render();
@@ -307,10 +235,9 @@ int main()
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 
-	vao.Delete();
-	vbo.Delete();
-	ebo.Delete();
-	shaderProgram.Delete();
+	delete quad;
+	heightMapShader.Delete();
+	blurShader.Delete();
 
 	glfwDestroyWindow(window);
 	glfwTerminate();

@@ -1,7 +1,5 @@
 #include "camera.h"
 
-#define PI 3.14159265358979
-
 Camera::Camera()
 {
 	this->pos = vec3(.0, .0, .1);

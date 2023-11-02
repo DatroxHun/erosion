@@ -152,14 +152,15 @@
     <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="shaderClass.cpp" />
+    <ClCompile Include="subDivQuadClass.cpp" />
     <ClCompile Include="VAO.cpp" />
     <ClCompile Include="VBO.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="default.comp" />
-    <None Include="default.frag" />
-    <None Include="default.vert" />
-    <None Include="post.comp" />
+    <None Include="height_map.comp" />
+    <None Include="quad.frag" />
+    <None Include="quad.vert" />
+    <None Include="blur.comp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h" />
@@ -175,6 +176,7 @@
     <ClInclude Include="imgui\imstb_textedit.h" />
     <ClInclude Include="imgui\imstb_truetype.h" />
     <ClInclude Include="shaderClass.h" />
+    <ClInclude Include="subDivQuadClass.h" />
     <ClInclude Include="VAO.h" />
     <ClInclude Include="VBO.h" />
   </ItemGroup>

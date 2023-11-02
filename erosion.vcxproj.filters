@@ -69,18 +69,21 @@
     <ClCompile Include="camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="subDivQuadClass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="default.vert">
+    <None Include="quad.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="default.frag">
+    <None Include="quad.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="default.comp">
+    <None Include="height_map.comp">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="post.comp">
+    <None Include="blur.comp">
       <Filter>Resource Files\Shaders</Filter>
     </None>
   </ItemGroup>
@@ -128,6 +131,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="subDivQuadClass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

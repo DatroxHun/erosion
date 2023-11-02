@@ -17,8 +17,8 @@ layout(rgba32f, binding = 1) uniform image2D imgInput;
 void main()
 {             
     ivec2 sample_point = ivec2(floor((worldPos.xz + vec2(1.0)) / 2.0 * (resolution - .001)));
-    //vec2 interpolation = fract((worldPos.xz + vec2(1.0)) / 2.0 * resolution);
-    vec2 interpolation = smoothstep(0.0, 1.0, fract((worldPos.xz + vec2(1.0)) / 2.0 * resolution));
+    vec2 interpolation = fract((worldPos.xz + vec2(1.0)) / 2.0 * resolution);
+    //vec2 interpolation = smoothstep(0.0, 1.0, fract((worldPos.xz + vec2(1.0)) / 2.0 * resolution));
 
     float texCol00 = imageLoad(imgInput, min(sample_point + ivec2(0, 0), ivec2(resolution - 1))).x;
     float texCol01 = imageLoad(imgInput, min(sample_point + ivec2(0, 1), ivec2(resolution - 1))).x;
