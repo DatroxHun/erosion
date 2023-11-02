@@ -62,7 +62,7 @@ void main()
     */
 
     float scale = 1.;
-    float default_scale =  .025;
+    float default_scale = .00825;
 
     float weight = 1.0;
     float sum = 0.;

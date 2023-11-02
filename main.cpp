@@ -26,7 +26,7 @@ using namespace std::chrono;
 // constants
 #define WIDTH 800
 #define HEIGHT 800
-#define RES 128 // should be a power of 2 (128 works pretty well) -> above approx. 150 crashes!!!!!!!!!!!!!!!
+#define RES 512 // should be a power of 2 (128 works pretty well)
 
 // global variables
 Camera cam;
