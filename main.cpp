@@ -27,7 +27,7 @@ using namespace std::chrono;
 // constants
 #define WIDTH 800
 #define HEIGHT 800
-#define RES 4096 // should be a power of 2 (128 works pretty well)
+#define RES 512 // should be a power of 2 (128 works pretty well)
 
 // global variables
 Camera cam;
