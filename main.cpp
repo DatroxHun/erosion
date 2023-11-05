@@ -18,6 +18,7 @@
 #include "EBO.h"
 #include "VAO.h"
 #include "subDivQuadClass.h"
+#include "UI.h"
 
 #include "camera.h"
 
@@ -26,7 +27,7 @@ using namespace std::chrono;
 // constants
 #define WIDTH 800
 #define HEIGHT 800
-#define RES 512 // should be a power of 2 (128 works pretty well)
+#define RES 4096 // should be a power of 2 (128 works pretty well)
 
 // global variables
 Camera cam;
@@ -151,12 +152,9 @@ int main()
 	double currentTime, lastTime = glfwGetTime(), frameTime = glfwGetTime();
 
 	// UI
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	ImGui::StyleColorsDark();
-	ImGui_ImplGlfw_InitForOpenGL(window, true);
-	ImGui_ImplOpenGL3_Init("#version 430");
+	UIWindow uwin = UIWindow(window, "Settings");
+	uwin.set_layout([]() {ImGui::SliderInt("Blur Kernel Size", &blur_intensity, 0, 10); });
+	uwin.set_layout([]() {ImGui::InputFloat("Frame Tick Duration (s)", &frame_tick_duration, 0.025, .1); });
 
 	// callbacks
 	glfwSetCursorPosCallback(window, cursor_position_callback);
@@ -166,7 +164,7 @@ int main()
 	// terrain generation
 	heightMapShader.Activate();
 	glUniform2i(seedLocation, rand() % 1000, rand() % 1000);
-	glDispatchCompute((GLuint)(RES / 16), (GLuint)(RES / 16), 1);
+	glDispatchCompute((GLuint)(RES / 32), (GLuint)(RES / 32), 1);
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 	// main while loop
@@ -201,7 +199,7 @@ int main()
 		blurShader.Activate();
 		glUniform1i(blurIntensityLocation, blur_intensity);
 
-		glDispatchCompute((GLuint)(RES / 16), (GLuint)(RES / 16), 1);
+		glDispatchCompute((GLuint)(RES / 32), (GLuint)(RES / 32), 1);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 
@@ -211,19 +209,8 @@ int main()
 
 
 		// UI rendering
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-		ImGui::Begin("Settings");
-		ImGui::SliderInt("Blur Kernel Size", &blur_intensity, 0, 10);
-		ImGui::InputFloat("Frame Tick Duration (s)", &frame_tick_duration, 0.025, .1);
+		UIWindow::render(uwin);
 		frame_tick_duration = clamp(frame_tick_duration, .025f, 1.f);
-		ImGui::End();
-
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
 
 		// swap buffers and handle all GLFW events
 		glfwSwapBuffers(window);

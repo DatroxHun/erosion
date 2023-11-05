@@ -20,6 +20,11 @@ Quad::Quad(int resolution)
 
 	resolutionLocation = glGetUniformLocation(shader->ID, "resolution");
 	camMatLocation = glGetUniformLocation(shader->ID, "cam_mat");
+
+	free(vertices);
+	vertices = NULL;
+	free(indices);
+	indices = NULL;
 }
 
 void Quad::get_vertices()
